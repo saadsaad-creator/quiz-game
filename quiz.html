@@ -1,0 +1,198 @@
+<title>Ultimate GOD MODE Quiz v2</title>
+<style>
+body{font-family:Arial;text-align:center;direction:rtl;background:#0e0e1e;color:white;margin:0;padding:20px}
+.container{max-width:700px;margin:30px auto;background:#1f1f2f;border-radius:15px;padding:20px;box-shadow:0 0 15px rgba(0,0,0,0.5)}
+button{display:block;width:90%;margin:8px auto;padding:10px;border:none;border-radius:10px;background:#3498db;color:white;font-size:16px;cursor:pointer;position:relative;z-index:10;transition: all 0.2s;}
+button.correct{animation: correctAnim 0.3s forwards;}
+button.wrong{animation: wrongAnim 0.3s forwards;}
+@keyframes correctAnim{0%{transform:scale(1)}50%{transform:scale(1.1)}100%{transform:scale(1)}}
+@keyframes wrongAnim{0%{transform:scale(1)}50%{transform:scale(1.1) rotate(-5deg)}100%{transform:scale(1) rotate(0deg)}}
+#progress{height:12px;background:#444;border-radius:6px;margin:10px 0}
+#bar{height:12px;width:0%;background:#2ecc71;border-radius:6px}
+input{padding:8px;width:80%;border-radius:5px;border:none;margin:5px 0}
+#timer{font-size:18px;margin:5px;}
+</style>
+</head>
+<body>
+<div class="container" id="loginDiv">
+<h2>Ultimate GOD MODE Quiz v2</h2>
+<p>تسجيل الدخول / إنشاء حساب</p>
+<input type="text" id="username" placeholder="اسم المستخدم">
+<button onclick="login()">🔑 دخول / إنشاء حساب</button>
+</div>
+<div class="container" id="gameDiv" style="display:none;">
+<h2 id="welcome"></h2>
+<select id="level" onchange="resetGame()">
+<option value="easy">سهل</option>
+<option value="medium">متوسط</option>
+<option value="hard">صعب</option>
+</select>
+<p id="timer">⏱ 15 ثانية</p>
+<p id="question"></p>
+<div id="answers"></div>
+<p id="result"></p>
+<div id="progress"><div id="bar"></div></div>
+<p>🏆 النقاط: <span id="score">0</span></p>
+<p>🥇 أفضل نتيجة: <span id="high">0</span></p>
+<button id="restartBtn" style="display:none;" onclick="restartGame()">🔄 إعادة اللعبة</button>
+<h3>🌍 Leaderboard</h3>
+<div id="leaderboard"></div>
+</div>
+<audio id="win" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+<audio id="lose" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
+<script>
+let currentUser=null;
+let users=JSON.parse(localStorage.getItem("users"))||{};
+let current, score=0, high=0, level="easy";
+let used={easy:[],medium:[],hard:[]};
+let timerInterval, timeLeft=15;
+
+let questions={
+ easy:[
+  {q:"ما عاصمة المغرب؟", o:["الرباط","فاس","مراكش","طنجة"],c:0},
+  {q:"كم عدد أيام الأسبوع؟", o:["5","6","7","8"],c:2},
+  {q:"أين يقع نهر النيل؟", o:["المغرب","مصر","اليمن","العراق"],c:1},
+  {q:"ما لون السماء الصافية؟", o:["أخضر","أزرق","أحمر","أسود"],c:1},
+  {q:"كم عدد الحواس لدى الإنسان؟", o:["4","5","6","7"],c:1},
+  {q:"ما اسم أقرب كوكب للأرض؟", o:["الزهرة","المريخ","المشتري","زحل"],c:0},
+  {q:"ما الحيوان الذي يقول مو؟", o:["قط","حصان","بقرة","كلب"],c:2},
+  {q:"ما اسم أكبر محيط؟", o:["الأطلسي","الهندي","الهادئ","المتجمد"],c:2},
+  {q:"كم عدد أصابع اليد؟", o:["4","5","6","7"],c:1},
+  {q:"ما اسم الكوكب الأحمر؟", o:["المريخ","الزهرة","المشتري","زحل"],c:0},
+  {q:"ما اسم أطول نهر في العالم؟", o:["الأمازون","النيل","الدانوب","الكونغو"],c:1},
+  {q:"ما اسم القارة القطبية الجنوبية؟", o:["أنتاركتيكا","أوروبا","آسيا","أفريقيا"],c:0},
+  {q:"ما اسم أسرع حيوان بري؟", o:["الفهد","الأسد","الحصان","الفيل"],c:0},
+  {q:"كم عدد الكواكب في النظام الشمسي؟", o:["7","8","9","10"],c:1},
+  {q:"ما اسم أكبر قارة؟", o:["أفريقيا","آسيا","أوروبا","أمريكا"],c:1},
+  {q:"كم عدد الحروف في الأبجدية العربية؟", o:["26","28","30","32"],c:1},
+  {q:"ما لون أوراق النباتات؟", o:["أخضر","أصفر","أحمر","أزرق"],c:0},
+  {q:"كم عدد الحروف في كلمة 'HTML'؟", o:["3","4","5","6"],c:1},
+  {q:"ما هو الكوكب المعروف بالكوكب الأزرق؟", o:["الأرض","زحل","المريخ","الزهرة"],c:0},
+  {q:"من هو مؤلف القرآن؟", o:["محمد ﷺ","عيسى عليه السلام","موسى عليه السلام","يوسف عليه السلام"],c:0}
+ ],
+ medium:[
+  {q:"في أي عام اكتشف أمريكا؟", o:["1492","1500","1498","1482"],c:0},
+  {q:"أين تقع مدينة روما؟", o:["فرنسا","إيطاليا","ألمانيا","إسبانيا"],c:1},
+  {q:"ما هو أسرع كائن حي في البحر؟", o:["الدلفين","القرش","سمك الشراع","الحوت"],c:2},
+  {q:"من هو مكتشف قانون الجاذبية؟", o:["أينشتاين","نيوتن","جاليليو","كوبرنيكوس"],c:1},
+  {q:"كم سنة تستغرق الأرض لتدور حول الشمس؟", o:["365 يوم","360 يوم","366 يوم","364 يوم"],c:0},
+  {q:"ما هي عاصمة اليابان؟", o:["طوكيو","كيونغدو","سول","بكين"],c:0},
+  {q:"أين يقع جبل إيفرست؟", o:["الهند","نيبال","الصين","باكستان"],c:1},
+  {q:"ما هو الغاز الذي نتنفسه؟", o:["الأكسجين","النيتروجين","ثاني أكسيد الكربون","الهيدروجين"],c:0},
+  {q:"من هو أول رائد فضاء؟", o:["يوري غاغارين","أرمسترونغ","مايكل كولينز","نيك ألدرين"],c:0},
+  {q:"ما هو أكبر كوكب في النظام الشمسي؟", o:["زحل","المشتري","المريخ","الأرض"],c:1}
+ ],
+ hard:[
+  {q:"ما هو الكوكب الذي له أكبر حلقات؟", o:["زحل","المشتري","نبتون","أورانوس"],c:0},
+  {q:"من هو أول إنسان على القمر؟", o:["يوري غاغارين","أرمسترونغ","مايكل كولينز","نيك ألدرين"],c:1},
+  {q:"ما هو أسرع طائرة حربية؟", o:["F-22","SR-71 Blackbird","F-16","F-35"],c:1},
+  {q:"كم عدد الدقائق في الساعة؟", o:["60","50","70","80"],c:0},
+  {q:"ما اسم النهر الأطول في العالم؟", o:["الأمازون","النيل","الدانوب","الكونغو"],c:1}
+ ]
+};
+
+function login(){
+ let name=document.getElementById("username").value.trim();
+ if(!name) return alert("دخل اسم المستخدم");
+ currentUser=name;
+ if(!users[name]) users[name]={highScore:0};
+ localStorage.setItem("users",JSON.stringify(users));
+ high=users[name].highScore;
+ document.getElementById("high").innerText=high;
+ document.getElementById("welcome").innerText="مرحبا "+name;
+ document.getElementById("loginDiv").style.display="none";
+ document.getElementById("gameDiv").style.display="block";
+ updateLeaderboard();
+ resetGame();
+}
+
+function resetGame(){
+ level=document.getElementById("level").value;
+ score=0;
+ used[level]=[];
+ document.getElementById("score").innerText=score;
+ document.getElementById("restartBtn").style.display="none";
+ newQuestion();
+}
+
+function startTimer(){
+ clearInterval(timerInterval);
+ timeLeft=15;
+ document.getElementById("timer").innerText="⏱ "+timeLeft+" ثانية";
+ timerInterval=setInterval(()=>{
+   timeLeft--;
+   document.getElementById("timer").innerText="⏱ "+timeLeft+" ثانية";
+   if(timeLeft<=0){clearInterval(timerInterval);document.getElementById("lose").play();endGame();}
+ },1000);
+}
+
+function newQuestion(){
+ startTimer();
+ let pool=questions[level];
+ if(used[level].length===pool.length){endGame();return;}
+ let index;
+ do{index=Math.floor(Math.random()*pool.length);} while(used[level].includes(index));
+ used[level].push(index);
+ current=pool[index];
+ document.getElementById("question").innerText=current.q;
+ document.getElementById("answers").innerHTML="";
+ document.getElementById("result").innerText="";
+ current.o.forEach((opt,i)=>{
+   let btn=document.createElement("button");
+   btn.innerText=opt;
+   btn.addEventListener("click", ()=> check(i, btn));
+   document.getElementById("answers").appendChild(btn);
+ });
+ updateBar();
+}
+
+function check(i, btn){
+ clearInterval(timerInterval);
+ if(i===current.c){
+   score++;
+   document.getElementById("result").innerText="✅ صحيح";
+   btn.classList.add('correct');
+   document.getElementById("win").play();
+ }else{
+   document.getElementById("result").innerText="❌ خطأ";
+   btn.classList.add('wrong');
+   document.getElementById("lose").play();
+   endGame();
+   return;
+ }
+ document.getElementById("score").innerText=score;
+ if(score>high){high=score;users[currentUser].highScore=high;localStorage.setItem("users",JSON.stringify(users));document.getElementById("high").innerText=high;}
+ setTimeout(newQuestion,500);
+}
+
+function endGame(){
+ clearInterval(timerInterval);
+ document.getElementById("question").innerText="🎉 انتهت اللعبة! اضغط على إعادة اللعبة لإعادة المحاولة";
+ document.getElementById("answers").innerHTML="";
+ document.getElementById("restartBtn").style.display="block";
+ updateLeaderboard();
+}
+
+function restartGame(){
+ used[level]=[];
+ document.getElementById("restartBtn").style.display="none";
+ newQuestion();
+}
+
+function updateBar(){
+ let pool=questions[level].length;
+ let percent=(used[level].length/pool)*100;
+ document.getElementById("bar").style.width=percent+"%";
+}
+
+function updateLeaderboard(){
+ let lb=Object.entries(users).sort((a,b)=>b[1].highScore - a[1].highScore);
+ let html="<ol>";
+ lb.forEach(u=>{html+="<li>"+u[0]+" - "+u[1].highScore+"</li>";});
+ html+="</ol>";
+ document.getElementById("leaderboard").innerHTML=html;
+}
+</script>
+</body>
+</html>
+Welcom i hope to see u win
